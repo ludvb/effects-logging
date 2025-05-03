@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "effects-logging"
+dynamic = ["version"]
+requires-python = ">=3.10"
+dependencies = [
+    "termcolor",
+    "effects @ git+https://github.com/ludvb/effects",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "effects_logging.__version__.__version__"}
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--maxfail=1 --disable-warnings -q"
+testpaths = ["tests"]
