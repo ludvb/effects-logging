@@ -8,11 +8,12 @@ and functions for sending these effects.
 import contextvars
 import dataclasses as dc
 import re
+import sys
 import threading
 import time
 import uuid
 import warnings
-from typing import Any, Callable, Iterable, Optional, TextIO, TypeVar
+from typing import Any, Callable, Iterable, TextIO, TypeVar
 
 import effects as fx
 
@@ -35,7 +36,12 @@ from .types import (
 
 
 def log(level: LogLevel, message: Any) -> None:
-    """Sends a LogMessage effect with the specified level and message."""
+    """Send a log message with the specified level.
+
+    Args:
+        level: The severity level of the message.
+        message: The message to log (any object that can be converted to string).
+    """
     progressbar_lock = fx.safe_send(GetProgressBarLock())
     if progressbar_lock is not None:
         progressbar_lock.acquire(timeout=1.0)
@@ -55,23 +61,39 @@ def log(level: LogLevel, message: Any) -> None:
             progressbar_lock.release()
 
 
-def log_debug(message: Any):
-    """Logs a message with DEBUG level."""
+def log_debug(message: Any) -> None:
+    """Log a debug message (lowest priority).
+
+    Args:
+        message: The debug message to log.
+    """
     log(LogLevel.DEBUG, message)
 
 
-def log_info(message: Any):
-    """Logs a message with INFO level."""
+def log_info(message: Any) -> None:
+    """Log an informational message.
+
+    Args:
+        message: The informational message to log.
+    """
     log(LogLevel.INFO, message)
 
 
-def log_warning(message: Any):
-    """Logs a message with WARNING level."""
+def log_warning(message: Any) -> None:
+    """Log a warning message.
+
+    Args:
+        message: The warning message to log.
+    """
     log(LogLevel.WARNING, message)
 
 
-def log_error(message: Any):
-    """Logs a message with ERROR level."""
+def log_error(message: Any) -> None:
+    """Log an error message (highest priority).
+
+    Args:
+        message: The error message to log.
+    """
     log(LogLevel.ERROR, message)
 
 
@@ -80,18 +102,25 @@ T = TypeVar("T")
 
 def progressbar(
     iterable: Iterable[T],
-    total: Optional[int] = None,
-    desc_callback: Optional[Callable[[T], str]] = None,
+    total: int | None = None,
+    desc_callback: Callable[[T], str] | None = None,
     initial_desc: str | None = None,
 ) -> Iterable[T]:
-    """
-    Wraps an iterable with a progress bar display.
+    """Wrap an iterable with a progress bar display.
 
     Args:
-        iterable: The iterable to wrap
-        total: Total number of items (if known)
-        desc_callback: Function to generate description from current item
-        initial_desc: Initial description text
+        iterable: The iterable to track progress for.
+        total: Total number of items (auto-detected if None).
+        desc_callback: Function to generate description from current item.
+        initial_desc: Initial description text for the progress bar.
+
+    Yields:
+        Items from the original iterable.
+
+    Example:
+        >>> with text_writer():
+        ...     for item in progressbar(range(100), initial_desc="Processing"):
+        ...         process(item)
     """
     if total is None:
         try:
@@ -116,23 +145,21 @@ def progressbar(
             )
             fx.safe_send(set_pbar)
             yield item
-            k += 1
+            k += 1  # noqa: SIM113 - enumerate would complicate generator logic
             fx.safe_send(dc.replace(set_pbar, value=k))
     finally:
         fx.safe_send(CloseProgressBar(bar_id=bar_id))
 
 
-def _text_writer_log_message_handler(
-    file: TextIO, trim_escape_sequences: bool | None = None
-):
+def _text_writer_log_message_handler(file: TextIO, trim_escape_sequences: bool | None = None):
     if trim_escape_sequences is None:
         trim_escape_sequences = not file.isatty()
-    ansi_escape_pattern = re.compile(r'\x1b\[[0-9;]*m')
+    ansi_escape_pattern = re.compile(r"\x1b\[[0-9;]*m")
 
     def _handler_fn(effect: LogMessage):
         formatted_message = fx.send(FormatLogMessage(effect))
         if trim_escape_sequences:
-            formatted_message = ansi_escape_pattern.sub('', formatted_message)
+            formatted_message = ansi_escape_pattern.sub("", formatted_message)
         file.write(f"{formatted_message}\n")
         fx.safe_send(effect, interpret_final=False)
 
@@ -158,9 +185,7 @@ def _text_writer_open_progressbar(
             bar_id = effect.bar_id
             if bar_id is None:
                 bar_id = uuid.uuid4()
-            progressbars[bar_id] = ProgressBar(
-                bar_id=bar_id, start_time=time.monotonic()
-            )
+            progressbars[bar_id] = ProgressBar(bar_id=bar_id, start_time=time.monotonic())
 
             fx.send(WriteProgressBars())
             fx.send(FlushSink())
@@ -184,8 +209,7 @@ def _text_writer_close_progressbar(
             fx.send(ClearProgressBars())
 
             bar_id = effect.bar_id
-            if bar_id in progressbars:
-                del progressbars[bar_id]
+            progressbars.pop(bar_id, None)
             fx.safe_send(effect, interpret_final=False)
 
             fx.send(WriteProgressBars())
@@ -298,9 +322,7 @@ def _progressbar_background(file: TextIO, progressbar_update_interval: float = 0
         if updater_thread:
             return
         ctx = contextvars.copy_context()
-        updater_thread = threading.Thread(
-            target=lambda: ctx.run(_display_updater), daemon=True
-        )
+        updater_thread = threading.Thread(target=lambda: ctx.run(_display_updater), daemon=True)
         updater_thread.start()
 
     return fx.stack(
@@ -323,17 +345,22 @@ def _progressbar_foreground(file: TextIO, progressbar_update_interval: float = 0
     class _dummy_lock:
         def acquire(self, blocking: bool = True, timeout: float = -1):
             return True
+
         def release(self):
             pass
+
         def locked(self) -> bool:
             return False
+
         def __enter__(self):
             return True
+
         def __exit__(self, type, value, traceback):
             pass
+
     progressbar_lock = _dummy_lock()
 
-    last_update_time = 0.
+    last_update_time = 0.0
 
     def _update_progressbars(effect: fx.Effect):
         nonlocal last_update_time
@@ -363,13 +390,9 @@ def _text_writer_tty(
     progressbar_async: bool = True,
 ):
     if progressbar_async:
-        progressbar_updater = _progressbar_background(
-            file, progressbar_update_interval
-        )
+        progressbar_updater = _progressbar_background(file, progressbar_update_interval)
     else:
-        progressbar_updater = _progressbar_foreground(
-            file, progressbar_update_interval
-        )
+        progressbar_updater = _progressbar_foreground(file, progressbar_update_interval)
     return fx.stack(
         _text_writer_file(file),
         _text_writer_format_progressbar_handler(),
@@ -378,11 +401,28 @@ def _text_writer_tty(
 
 
 def text_writer(
-    file: TextIO,
+    file: TextIO | None = None,
     progressbar_update_interval: float = 0.1,
     progressbar_async: bool = False,
 ):
-    if file.isatty():
-        return _text_writer_tty(file, progressbar_update_interval, progressbar_async)
+    """Create a handler context for text-based logging output.
+
+    Args:
+        file: Output stream (defaults to sys.stdout if None).
+        progressbar_update_interval: Update frequency for progress bars (seconds).
+        progressbar_async: Whether to update progress bars in a background thread.
+
+    Returns:
+        A context manager that handles log messages and progress bars.
+
+    Example:
+        >>> with text_writer():
+        ...     log_info("Application started")
+        ...     for item in progressbar(range(100)):
+        ...         process(item)
+    """
+    output_file = file if file is not None else sys.stdout
+    if output_file.isatty():
+        return _text_writer_tty(output_file, progressbar_update_interval, progressbar_async)
     else:
-        return _text_writer_file(file)
+        return _text_writer_file(output_file)

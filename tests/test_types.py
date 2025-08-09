@@ -69,11 +69,7 @@ class TestProgressBar:
         """Test ProgressBar with custom values."""
         bar_id = uuid.uuid4()
         bar = ProgressBar(
-            bar_id=bar_id,
-            value=50,
-            total=100,
-            description="Processing",
-            start_time=123.45
+            bar_id=bar_id, value=50, total=100, description="Processing", start_time=123.45
         )
 
         assert bar.bar_id == bar_id
@@ -101,11 +97,7 @@ class TestProgressBarEffects:
         """Test SetProgressBar effect."""
         bar_id = uuid.uuid4()
         effect = SetProgressBar(
-            bar_id=bar_id,
-            value=25,
-            total=100,
-            description="Working",
-            start_time=1.0
+            bar_id=bar_id, value=25, total=100, description="Working", start_time=1.0
         )
 
         assert effect.bar_id == bar_id

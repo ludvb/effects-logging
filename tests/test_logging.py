@@ -6,7 +6,6 @@ import io
 import warnings
 
 import effects as fx
-
 from effects_logging import log_debug, log_error, log_info, log_warning
 from effects_logging.core import text_writer
 from effects_logging.types import LogLevel, LogMessage
@@ -29,18 +28,10 @@ class TestBasicLogging:
             log_error("error message")
 
         assert len(effects_sent) == 4
-        assert effects_sent[0] == LogMessage(
-            message="debug message", level=LogLevel.DEBUG
-        )
-        assert effects_sent[1] == LogMessage(
-            message="info message", level=LogLevel.INFO
-        )
-        assert effects_sent[2] == LogMessage(
-            message="warning message", level=LogLevel.WARNING
-        )
-        assert effects_sent[3] == LogMessage(
-            message="error message", level=LogLevel.ERROR
-        )
+        assert effects_sent[0] == LogMessage(message="debug message", level=LogLevel.DEBUG)
+        assert effects_sent[1] == LogMessage(message="info message", level=LogLevel.INFO)
+        assert effects_sent[2] == LogMessage(message="warning message", level=LogLevel.WARNING)
+        assert effects_sent[3] == LogMessage(message="error message", level=LogLevel.ERROR)
 
     def test_log_with_text_writer_to_file(self):
         """Test logging with text_writer to a non-TTY file."""
@@ -51,7 +42,7 @@ class TestBasicLogging:
             log_error("An error occurred")
 
         result = output.getvalue()
-        lines = result.strip().split('\n')
+        lines = result.strip().split("\n")
 
         # Should have 2 lines of output
         assert len(lines) == 2
@@ -111,8 +102,8 @@ class TestTextWriterBehavior:
         file_handler = text_writer(regular_file)
 
         # Both should be context managers (they return fx.stack objects)
-        assert hasattr(tty_handler, '__enter__') and hasattr(tty_handler, '__exit__')
-        assert hasattr(file_handler, '__enter__') and hasattr(file_handler, '__exit__')
+        assert hasattr(tty_handler, "__enter__") and hasattr(tty_handler, "__exit__")
+        assert hasattr(file_handler, "__enter__") and hasattr(file_handler, "__exit__")
 
     def test_multiline_log_message_formatting(self):
         """Test that multiline messages are formatted correctly."""
@@ -124,7 +115,7 @@ class TestTextWriterBehavior:
             log_info(multiline_message)
 
         result = output.getvalue()
-        lines = result.strip().split('\n')
+        lines = result.strip().split("\n")
 
         # Should have 3 lines for the multiline message
         assert len(lines) == 3

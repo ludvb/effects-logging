@@ -102,15 +102,17 @@ class TestProgressBarTTYRendering:
         assert len(output_text) > 100  # TTY output should be substantial
 
         # Should contain TTY-specific elements: escape sequences and progress indicators
-        has_tty_elements = any([
-            "TTY Progress" in output_text,  # Description
-            "%" in output_text,             # Percentage
-            "/" in output_text,             # Progress fraction
-            "it/s" in output_text,          # Rate
-            "█" in output_text,             # Progress bar characters
-            "-" in output_text,             # Progress bar characters
-            "|" in output_text              # Progress bar borders
-        ])
+        has_tty_elements = any(
+            [
+                "TTY Progress" in output_text,  # Description
+                "%" in output_text,  # Percentage
+                "/" in output_text,  # Progress fraction
+                "it/s" in output_text,  # Rate
+                "█" in output_text,  # Progress bar characters
+                "-" in output_text,  # Progress bar characters
+                "|" in output_text,  # Progress bar borders
+            ]
+        )
 
         # Should have escape sequences for TTY control
         has_escape_sequences = "\x1b" in output_text or "\r" in output_text
@@ -138,14 +140,16 @@ class TestProgressBarTTYRendering:
         # If output is minimal, it means progress completed too quickly
         if len(output_text) > 50:
             # Normal case: progress bar had time to render
-            has_progress_indicators = any([
-                "Custom Total" in output_text,
-                "%" in output_text,
-                "/" in output_text,
-                "10" in output_text,  # Total should appear
-                "█" in output_text,   # Progress bar fill
-                "|" in output_text    # Progress bar structure
-            ])
+            has_progress_indicators = any(
+                [
+                    "Custom Total" in output_text,
+                    "%" in output_text,
+                    "/" in output_text,
+                    "10" in output_text,  # Total should appear
+                    "█" in output_text,  # Progress bar fill
+                    "|" in output_text,  # Progress bar structure
+                ]
+            )
             assert has_progress_indicators
         else:
             # Fast completion case: should at least have TTY control sequences
@@ -175,15 +179,17 @@ class TestProgressBarTTYRendering:
         assert len(output_text) > 80  # Reduced slightly as actual output is ~96 chars
 
         # Should contain dynamic descriptions or progress elements
-        has_dynamic_content = any([
-            "task_a" in output_text,
-            "task_b" in output_text,
-            "task_c" in output_text,
-            "Processing" in output_text,
-            "/" in output_text,
-            "%" in output_text,
-            "█" in output_text
-        ])
+        has_dynamic_content = any(
+            [
+                "task_a" in output_text,
+                "task_b" in output_text,
+                "task_c" in output_text,
+                "Processing" in output_text,
+                "/" in output_text,
+                "%" in output_text,
+                "█" in output_text,
+            ]
+        )
 
         # Should have TTY control sequences
         has_tty_sequences = "\x1b" in output_text or "\r" in output_text
@@ -198,7 +204,7 @@ class TestProgressBarTTYRendering:
         items = [1, 2, 3]
 
         with text_writer(output):
-            for item in progressbar(items, initial_desc="Timing Test"):
+            for _ in progressbar(items, initial_desc="Timing Test"):
                 time.sleep(0.1)  # Enough delay to ensure timing updates
 
         output_text = output.getvalue()
@@ -207,15 +213,17 @@ class TestProgressBarTTYRendering:
         assert len(output_text) > 80
 
         # Should contain timing-related information
-        has_timing_elements = any([
-            "s" in output_text,           # Seconds indicator
-            "it/s" in output_text,        # Rate indicator
-            "Timing Test" in output_text, # Description
-            "[" in output_text,           # Timing brackets
-            "]" in output_text,           # Timing brackets
-            "/" in output_text,           # Progress fraction
-            "%" in output_text            # Percentage
-        ])
+        has_timing_elements = any(
+            [
+                "s" in output_text,  # Seconds indicator
+                "it/s" in output_text,  # Rate indicator
+                "Timing Test" in output_text,  # Description
+                "[" in output_text,  # Timing brackets
+                "]" in output_text,  # Timing brackets
+                "/" in output_text,  # Progress fraction
+                "%" in output_text,  # Percentage
+            ]
+        )
 
         # Should have TTY escape sequences
         has_escape_sequences = "\x1b" in output_text or "\r" in output_text
@@ -283,7 +291,7 @@ class TestProgressBarTTYRendering:
         tty_output.isatty = lambda: True
 
         with text_writer(tty_output):
-            for item in progressbar(items, initial_desc="Test"):
+            for _ in progressbar(items, initial_desc="Test"):
                 time.sleep(0.05)  # Allow progress updates
 
         tty_text = tty_output.getvalue()
@@ -312,7 +320,7 @@ class TestProgressBarWithTextWriter:
 
         with text_writer(output):
             log_info("Starting")
-            for item in progressbar(items, initial_desc="Working"):
+            for _ in progressbar(items, initial_desc="Working"):
                 pass
             log_info("Finished")
 
@@ -331,7 +339,7 @@ class TestProgressBarWithTextWriter:
 
         with text_writer(output):
             log_info("Starting")
-            for item in progressbar(items, initial_desc="Working"):
+            for _ in progressbar(items, initial_desc="Working"):
                 time.sleep(0.02)
             log_info("Finished")
 

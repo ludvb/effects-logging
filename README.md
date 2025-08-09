@@ -1,6 +1,6 @@
 # effects-logging
 
-Python logging and progress bar library built on the [effects](https://github.com/ludvb/effects) library.
+A composable logging framework built on the [effects library](https://github.com/ludvb/effects).
 
 ## Installation
 
@@ -11,163 +11,117 @@ pip install git+https://github.com/ludvb/effects-logging.git
 ## Usage
 
 ```python
-import sys
-import time
-import effects as fx
-from effects_logging import log_info, log_warning, progressbar, text_writer
+import effects_logging as logging
+from effects_logging import text_writer
 
-def process_items(items):
-    log_info(f"Starting processing for {len(items)} items.")
-    processed_count = 0
-    
-    # Use progressbar to wrap the iterable
-    for i in progressbar(items, initial_desc="Processing"):
-        # Simulate some work
-        time.sleep(0.1)
-        if i % 3 == 0:
-            log_warning(f"Item {i} caused a warning.")
-        processed_count += 1
-        
-    log_info(f"Finished processing {processed_count} items.")
+# Basic logging
+with text_writer():
+    logging.log_info("Application started")
+    logging.log_error("Something went wrong")
 
-# Define the items to process
-my_items = range(10)
-
-# Use text_writer to handle logging and progress bars
-with text_writer(sys.stdout):
-    process_items(my_items)
+# Progress bars
+with text_writer():
+    for item in logging.progressbar(range(100)):
+        process(item)
 ```
 
-When run, this will output formatted log messages and a progress bar to your terminal.
+## Features
 
-### Writing to Files
-
-You can direct output to files, and the library automatically detects whether the output is a TTY (terminal) or file:
+### Structured Logging
 
 ```python
-from effects_logging import log_info, log_error, progressbar, text_writer
+from effects_logging import log_debug, log_info, log_warning, log_error, text_writer
 
-# Write to a file - progress bars are disabled for file output
-with open("app.log", "w") as log_file:
-    with text_writer(log_file):
-        log_info("Application started")
-        for i in progressbar(range(5), initial_desc="Processing"):
-            log_info(f"Processed item {i}")
-        log_error("An error occurred during processing")
-
-# Write to both stdout and a file
-import sys
-import effects as fx
-
-with open("app.log", "w") as log_file:
-    with fx.stack(
-        text_writer(sys.stdout),  # TTY output with progress bars
-        text_writer(log_file),    # File output without progress bars
-    ):
-        log_info("This goes to both stdout and file")
-        for i in progressbar(range(3), initial_desc="Working"):
-            log_info(f"Step {i}")
+with text_writer():
+    log_debug("Debug information")
+    log_info("Application running")
+    log_warning("Resource usage high")
+    log_error("Connection failed")
 ```
 
-### Progress Bar Description Callback
-
-Update the progress bar description dynamically based on the current item:
+### Progress Tracking
 
 ```python
-import sys
-import time
-import effects as fx
-from effects_logging import progressbar, text_writer
+# Basic progress bar
+items = load_data()
+with text_writer():
+    for item in progressbar(items, initial_desc="Processing"):
+        process(item)
 
-def process_file(filename):
-    # Simulate work based on file type
-    time.sleep(0.5 if filename.endswith(".pdf") else 0.2)
-
-def process_all_files():
-    files = ["file_a.txt", "report.pdf", "image.jpg"]
-    
-    for f in progressbar(files, desc_callback=lambda item: f"Processing {item}"):
+# Dynamic descriptions
+files = ["data.csv", "report.pdf", "image.png"]
+with text_writer():
+    for f in progressbar(files, desc_callback=lambda x: f"Processing {x}"):
         process_file(f)
-
-# Use text_writer to handle progress bars
-with text_writer(sys.stdout):
-    process_all_files()
 ```
 
-### Nested Progress Bars
-
-You can nest progress bars for complex processing workflows:
+### File Output
 
 ```python
-import sys
-import time
-import effects as fx
-from effects_logging import log_info, progressbar, text_writer
+# Write to file (progress bars automatically disabled)
+with open("app.log", "w") as f:
+    with text_writer(f):
+        log_info("Writing to file")
+        for i in progressbar(range(10)):
+            log_info(f"Step {i}")
 
-def process_batch(batch_id, items):
-    log_info(f"Starting batch {batch_id}")
-    
-    for item in progressbar(items, desc_callback=lambda x: f"Batch {batch_id}: Item {x}"):
-        # Simulate sub-processing
-        for sub_item in progressbar(range(3), initial_desc=f"Sub-processing {item}"):
-            time.sleep(0.1)
-    
-    log_info(f"Completed batch {batch_id}")
-
-# Process multiple batches
-batches = [
-    (1, [1, 2, 3]),
-    (2, [4, 5, 6, 7]),
-    (3, [8, 9])
-]
-
-with text_writer(sys.stdout):
-    for batch_id, items in progressbar(batches, initial_desc="Processing batches"):
-        process_batch(batch_id, items)
-```
-
-### Available Log Levels
-
-```python
+# Simultaneous console and file output
 import sys
 import effects as fx
-from effects_logging import log_debug, log_info, log_warning, log_error, LogLevel, text_writer
 
-with text_writer(sys.stdout):
-    log_debug("Debug message")      # LogLevel.DEBUG (0)
-    log_info("Info message")        # LogLevel.INFO (10)  
-    log_warning("Warning message")  # LogLevel.WARNING (50)
-    log_error("Error message")      # LogLevel.ERROR (100)
+with open("app.log", "w") as f:
+    with text_writer(sys.stdout), text_writer(f):
+        log_info("Goes to both console and file")
 ```
 
-### Graceful Degradation
+### Custom Handlers
 
-The library gracefully handles cases where no `text_writer` is active:
+The effects pattern allows you to compose and customize logging behavior:
 
 ```python
-from effects_logging import log_info, progressbar
+import os
+import effects as fx
+from effects_logging import LogMessage, log_info, text_writer
 
-# Without text_writer, logs show as warnings and progressbar passes through
-log_info("This will show as a warning")
+# Transform messages before they reach the output handler
+def add_context(effect: LogMessage) -> None:
+    """Add contextual information to all log messages."""
+    modified = LogMessage(
+        message=f"[{os.getpid()}] {effect.message}",
+        level=effect.level
+    )
+    fx.send(modified, interpret_final=False)  # Forward modified effect
 
-# Progress bars still work, just without visual progress indication
-for item in progressbar([1, 2, 3], initial_desc="Processing"):
-    print(f"Processing {item}")  # This will still print normally
+# Stack handlers - transformations run first, then output
+with text_writer(), fx.handler(add_context, LogMessage):
+    log_info("Server started")  # Output includes PID prefix
+
+# Or completely replace the output format
+def json_handler(effect: LogMessage) -> None:
+    import json
+    print(json.dumps({"level": effect.level.name, "message": str(effect.message)}))
+
+with fx.handler(json_handler, LogMessage):
+    log_info("This outputs as JSON")
 ```
 
-### Asynchronous Progress Bars
+## Development
 
-Progress bars can be updated in a background thread by passing `progressbar_async=True` to `text_writer`:
+```bash
+# Install with dev dependencies
+pip install -e ".[dev]"
 
-```python
-with text_writer(sys.stdout, progressbar_async=True):
-    # ...
+# Run tests
+pytest tests/ -v
+
+# Type checking
+pyright
+
+# Linting
+ruff check src/ tests/
+ruff format src/ tests/
 ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to open an issue to report bugs or suggest features, or submit a pull request with improvements.
 
 ## License
 
-This project is licensed under the MIT License.
+MIT

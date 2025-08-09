@@ -1,7 +1,7 @@
 import dataclasses as dc
 import uuid
 from enum import IntEnum
-from typing import Generic, Iterable, Protocol, TypeVar
+from typing import Iterable, Protocol, TypeVar
 
 import effects as fx
 
@@ -27,7 +27,7 @@ class ProgressBar:
 
 
 @dc.dataclass
-class LogMessage(Generic[MessageType], fx.Effect[None]):
+class LogMessage[MessageType](fx.Effect[None]):
     message: MessageType
     level: LogLevel
 
@@ -77,7 +77,7 @@ class GetProgressBarLock(fx.Effect[Lock]): ...
 
 
 @dc.dataclass
-class FormatLogMessage(Generic[MessageType, SinkType], fx.Effect[SinkType]):
+class FormatLogMessage[MessageType, SinkType](fx.Effect[SinkType]):
     log_message: LogMessage[MessageType]
 
 

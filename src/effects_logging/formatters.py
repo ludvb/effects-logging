@@ -29,15 +29,13 @@ def format_text_message(text: str, level: LogLevel) -> str:
         line1 = f"+ {line1}"
         lines = [f"| {line}" for line in lines]
         lineN = f"+ {lineN}"
-        lines = [line1] + lines + [lineN]
-    formatted_lines = [
-        f"[ {timestamp} ] {level_str} {pid_str} {line}" for line in lines
-    ]
+        lines = [line1, *lines, lineN]
+    formatted_lines = [f"[ {timestamp} ] {level_str} {pid_str} {line}" for line in lines]
     return "\n".join(formatted_lines)
 
 
-def _format_duration(total_seconds: float, sep="") -> str:
-    if total_seconds == float('inf'):
+def format_duration(total_seconds: float, sep="") -> str:
+    if total_seconds == float("inf"):
         return "inf"
     days = int(total_seconds // (24 * 3600))
     remaining_seconds = total_seconds % (24 * 3600)
@@ -60,11 +58,7 @@ def _format_duration(total_seconds: float, sep="") -> str:
 
 def format_progressbar(progressbar_state: ProgressBar):
     term_width = shutil.get_terminal_size((80, 20)).columns
-    prefix = (
-        f"{progressbar_state.description}: "
-        if progressbar_state.description
-        else ""
-    )
+    prefix = f"{progressbar_state.description}: " if progressbar_state.description else ""
     elapsed = time.monotonic() - progressbar_state.start_time
 
     if elapsed > 0 and progressbar_state.value > 0:
@@ -72,7 +66,7 @@ def format_progressbar(progressbar_state: ProgressBar):
         if rate >= 1:
             rate_str = f", {rate:.2f}it/s"
         else:
-            rate_str = f", {1/rate:.2f}s/it"
+            rate_str = f", {1 / rate:.2f}s/it"
     else:
         rate_str = ", 0.00it/s"
 
@@ -81,36 +75,28 @@ def format_progressbar(progressbar_state: ProgressBar):
         percentage = min(100, int(100 * progressbar_state.value / total))
         progress_str = f"{percentage}%|"
 
-        elapsed_str = _format_duration(elapsed)
+        elapsed_str = format_duration(elapsed)
         eta = (
             (elapsed / progressbar_state.value * (total - progressbar_state.value))
             if progressbar_state.value > 0
             else float("inf")
         )
-        eta_str = _format_duration(eta)
-        suffix = (
-            f"| {progressbar_state.value}/{total} [{elapsed_str}<{eta_str}{rate_str}]"
-        )
+        eta_str = format_duration(eta)
+        suffix = f"| {progressbar_state.value}/{total} [{elapsed_str}<{eta_str}{rate_str}]"
 
-        progressbar_state_len = (
-            term_width - len(prefix) - len(progress_str) - len(suffix)
-        )
+        progressbar_state_len = term_width - len(prefix) - len(progress_str) - len(suffix)
         progressbar_state_len = max(MIN_PROGRESSBAR_LEN, progressbar_state_len)
 
         filled_len = int(progressbar_state_len * progressbar_state.value / total)
-        progressbar_state_render = (
-            "█" * filled_len + "-" * (progressbar_state_len - filled_len)
-        )
+        progressbar_state_render = "█" * filled_len + "-" * (progressbar_state_len - filled_len)
     else:
         percentage = None
         progress_str = ""
 
-        elapsed_str = _format_duration(elapsed)
+        elapsed_str = format_duration(elapsed)
         suffix = f" {progressbar_state.value} [{elapsed_str}{rate_str}]"
 
-        progressbar_state_len = (
-            term_width - len(prefix) - len(progress_str) - len(suffix)
-        )
+        progressbar_state_len = term_width - len(prefix) - len(progress_str) - len(suffix)
         progressbar_state_len = max(MIN_PROGRESSBAR_LEN, progressbar_state_len)
 
         progressbar_state_render = "-" * progressbar_state_len

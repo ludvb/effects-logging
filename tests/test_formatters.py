@@ -7,7 +7,7 @@ import uuid
 from unittest.mock import patch
 
 from effects_logging.formatters import (
-    _format_duration,
+    format_duration,
     format_progressbar,
     format_text_message,
 )
@@ -50,7 +50,7 @@ class TestTextMessageFormatting:
         multiline_message = "First line\nSecond line\nThird line"
         result = format_text_message(multiline_message, LogLevel.INFO)
 
-        lines = result.split('\n')
+        lines = result.split("\n")
         assert len(lines) == 3
 
         # Check multiline formatting
@@ -70,7 +70,7 @@ class TestProgressBarFormatting:
             value=50,
             total=100,
             description="Processing files",
-            start_time=time.monotonic() - 10  # 10 seconds elapsed
+            start_time=time.monotonic() - 10,  # 10 seconds elapsed
         )
 
         result = format_progressbar(progressbar)
@@ -88,7 +88,7 @@ class TestProgressBarFormatting:
             value=25,
             total=None,
             description="Scanning",
-            start_time=time.monotonic() - 5
+            start_time=time.monotonic() - 5,
         )
 
         result = format_progressbar(progressbar)
@@ -102,11 +102,7 @@ class TestProgressBarFormatting:
         """Test progress bar formatting without description."""
         bar_id = uuid.uuid4()
         progressbar = ProgressBar(
-            bar_id=bar_id,
-            value=10,
-            total=20,
-            description="",
-            start_time=time.monotonic() - 2
+            bar_id=bar_id, value=10, total=20, description="", start_time=time.monotonic() - 2
         )
 
         result = format_progressbar(progressbar)
@@ -115,7 +111,7 @@ class TestProgressBarFormatting:
         assert "10/20" in result or "50%" in result
         assert len(result) > 0
 
-    @patch('shutil.get_terminal_size')
+    @patch("shutil.get_terminal_size")
     def test_format_progressbar_respects_terminal_width(self, mock_terminal_size):
         """Test that progress bar respects terminal width."""
         mock_terminal_size.return_value.columns = 50
@@ -126,7 +122,7 @@ class TestProgressBarFormatting:
             value=1,
             total=2,
             description="Very long description that might exceed terminal width",
-            start_time=time.monotonic()
+            start_time=time.monotonic(),
         )
 
         result = format_progressbar(progressbar)
@@ -140,16 +136,16 @@ class TestDurationFormatting:
 
     def test_format_duration_basic(self):
         """Test basic duration formatting."""
-        assert _format_duration(61) == " 1m 1s"  # 1 minute 1 second
-        assert _format_duration(3661) == " 1h 1m"  # 1h 1m (no secs)
-        assert _format_duration(30) == "30s"  # 30 seconds
-        assert _format_duration(0) == " 0s"  # 0 seconds
+        assert format_duration(61) == " 1m 1s"  # 1 minute 1 second
+        assert format_duration(3661) == " 1h 1m"  # 1h 1m (no secs)
+        assert format_duration(30) == "30s"  # 30 seconds
+        assert format_duration(0) == " 0s"  # 0 seconds
 
     def test_format_duration_complex(self):
         """Test complex duration formatting."""
         # 1 day, 2 hours, 3 minutes, 4 seconds
-        total_seconds = 24*3600 + 2*3600 + 3*60 + 4
-        result = _format_duration(total_seconds)
+        total_seconds = 24 * 3600 + 2 * 3600 + 3 * 60 + 4
+        result = format_duration(total_seconds)
         assert "1d" in result
         assert "2h" in result
         assert "3m" in result
@@ -157,5 +153,5 @@ class TestDurationFormatting:
 
     def test_format_duration_infinity(self):
         """Test formatting infinite duration."""
-        result = _format_duration(float('inf'))
+        result = format_duration(float("inf"))
         assert result == "inf"

@@ -23,7 +23,7 @@ class TestIntegrationScenarios:
             log_info("Process completed")
 
         result = output.getvalue()
-        lines = result.strip().split('\n')
+        lines = result.strip().split("\n")
 
         assert len(lines) == 3
         assert "Starting process" in result
@@ -74,7 +74,7 @@ class TestIntegrationScenarios:
 
         assert processed_files == files
 
-    @patch('time.sleep')  # Speed up the test
+    @patch("time.sleep")  # Speed up the test
     def test_nested_progress_bars(self, mock_sleep):
         """Test nested progress bars scenario."""
         output = io.StringIO()
@@ -144,7 +144,7 @@ class TestIntegrationScenarios:
             list(progressbar(items, initial_desc="File progress"))
 
         # Test with TTY output
-        with patch('time.sleep'):  # Speed up TTY test
+        with patch("time.sleep"):  # Speed up TTY test
             with text_writer(tty_output):
                 log_info("TTY test")
                 list(progressbar(items, initial_desc="TTY progress"))
