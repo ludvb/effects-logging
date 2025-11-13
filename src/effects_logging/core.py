@@ -156,7 +156,7 @@ def _text_writer_log_message_handler(file: TextIO, trim_escape_sequences: bool |
         trim_escape_sequences = not file.isatty()
     ansi_escape_pattern = re.compile(r"\x1b\[[0-9;]*m")
 
-    def _handler_fn(effect: LogMessage):
+    def _handler_fn(effect: LogMessage[str]):
         formatted_message = fx.send(FormatLogMessage(effect))
         if trim_escape_sequences:
             formatted_message = ansi_escape_pattern.sub("", formatted_message)
