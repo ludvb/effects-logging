@@ -156,6 +156,7 @@ def _text_writer_log_message_handler(file: TextIO, trim_escape_sequences: bool |
         trim_escape_sequences = not file.isatty()
     ansi_escape_pattern = re.compile(r"\x1b\[[0-9;]*m")
 
+    @fx.handler
     def _handler_fn(effect: LogMessage[str]):
         formatted_message = fx.send(FormatLogMessage(effect))
         if trim_escape_sequences:
@@ -163,21 +164,23 @@ def _text_writer_log_message_handler(file: TextIO, trim_escape_sequences: bool |
         file.write(f"{formatted_message}\n")
         fx.safe_send(effect, interpret_final=False)
 
-    return fx.handler(_handler_fn, LogMessage)
+    return _handler_fn
 
 
 def _text_writer_flush_sink_handler(file: TextIO):
+    @fx.handler
     def _handler_fn(effect: FlushSink):
         file.flush()
         fx.safe_send(effect, interpret_final=False)
 
-    return fx.handler(_handler_fn, FlushSink)
+    return _handler_fn
 
 
 def _text_writer_open_progressbar(
     progressbars: dict,
     progress_updater_start: Callable[[], None] | None = None,
 ):
+    @fx.handler
     def _handler_fn(effect: OpenProgressBar):
         with fx.send(GetProgressBarLock()):
             fx.send(ClearProgressBars())
@@ -197,13 +200,14 @@ def _text_writer_open_progressbar(
 
         return bar_id
 
-    return fx.handler(_handler_fn, OpenProgressBar)
+    return _handler_fn
 
 
 def _text_writer_close_progressbar(
     progressbars: dict,
     progress_updater_stop: Callable[[], None] | None = None,
 ):
+    @fx.handler
     def _handler_fn(effect: CloseProgressBar):
         with fx.send(GetProgressBarLock()):
             fx.send(ClearProgressBars())
@@ -218,10 +222,11 @@ def _text_writer_close_progressbar(
         if progress_updater_stop:
             progress_updater_stop()
 
-    return fx.handler(_handler_fn, CloseProgressBar)
+    return _handler_fn
 
 
 def _text_writer_set_progressbar(progressbars: dict):
+    @fx.handler
     def _handler_fn(effect: SetProgressBar):
         progressbars[effect.bar_id] = dc.replace(
             progressbars[effect.bar_id],
@@ -232,10 +237,11 @@ def _text_writer_set_progressbar(progressbars: dict):
         )
         fx.safe_send(effect, interpret_final=False)
 
-    return fx.handler(_handler_fn, SetProgressBar)
+    return _handler_fn
 
 
 def _text_writer_clear_progressbars(file: TextIO, progressbars: dict):
+    @fx.handler
     def _handler_fn(effect: ClearProgressBars):
         file.write("\r")
         if len(progressbars) > 1:
@@ -243,10 +249,11 @@ def _text_writer_clear_progressbars(file: TextIO, progressbars: dict):
         file.write("\033[J")
         fx.safe_send(effect, interpret_final=False)
 
-    return fx.handler(_handler_fn, ClearProgressBars)
+    return _handler_fn
 
 
 def _text_writer_write_progressbars(file: TextIO, progressbars: dict):
+    @fx.handler
     def _handler_fn(effect: WriteProgressBars):
         progressbar_strings = []
         for state in progressbars.values():
@@ -256,33 +263,36 @@ def _text_writer_write_progressbars(file: TextIO, progressbars: dict):
         file.write("\033[K")
         fx.safe_send(effect, interpret_final=False)
 
-    return fx.handler(_handler_fn, WriteProgressBars)
+    return _handler_fn
 
 
 def _text_writer_get_progressbar_lock(lock: Lock):
+    @fx.handler
     def _handler_fn(effect: GetProgressBarLock):
         if lock_upstream := fx.safe_send(effect, interpret_final=False):
             return lock_upstream
         return lock
 
-    return fx.handler(_handler_fn, GetProgressBarLock)
+    return _handler_fn
 
 
 def _text_writer_format_log_message_handler():
+    @fx.handler
     def _handler_fn(effect: FormatLogMessage):
         return format_text_message(
             effect.log_message.message,
             effect.log_message.level,
         )
 
-    return fx.handler(_handler_fn, FormatLogMessage)
+    return _handler_fn
 
 
 def _text_writer_format_progressbar_handler():
+    @fx.handler
     def _handler_fn(effect: FormatProgressBar):
         return format_progressbar(effect.progressbar)
 
-    return fx.handler(_handler_fn, FormatProgressBar)
+    return _handler_fn
 
 
 def _text_writer_file(file: TextIO):
@@ -362,7 +372,8 @@ def _progressbar_foreground(file: TextIO, progressbar_update_interval: float = 0
 
     last_update_time = 0.0
 
-    def _update_progressbars(effect: fx.Effect):
+    @fx.handler
+    def _update_progressbars(effect: SetProgressBar):
         nonlocal last_update_time
         fx.safe_send(effect, interpret_final=False)
         current_time = time.monotonic()
@@ -380,7 +391,7 @@ def _progressbar_foreground(file: TextIO, progressbar_update_interval: float = 0
         _text_writer_set_progressbar(progressbar_dict),
         _text_writer_write_progressbars(file, progressbar_dict),
         _text_writer_clear_progressbars(file, progressbar_dict),
-        fx.handler(_update_progressbars, SetProgressBar),
+        _update_progressbars,
     )
 
 
